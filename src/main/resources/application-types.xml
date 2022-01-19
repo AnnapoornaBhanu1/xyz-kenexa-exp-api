@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<types:mule xmlns:types="http://www.mulesoft.org/schema/mule/types">
+  <types:catalog>
+    <types:type name="json-job-type" format="json">
+      <types:shape format="weave" example="examples/name-sample.json"><![CDATA[%dw 2.0
+
+type json_job_type = {|
+  orgName: String, 
+  firstName: String, 
+  middleName: String, 
+  lastName: String
+|} {"example": "{\\\"orgName\\\":\\\"Apisero\\\",\\\"firstName\\\":\\\"David\\\",\\\"middleName\\\":\\\"Rambo\\\",\\\"lastName\\\":\\\"Warner\\\"}"}
+
+]]></types:shape>
+    </types:type>
+  </types:catalog>
+  <types:enrichment select="#e271d4aa-4f8b-4ab1-a65a-0e07060c7892">
+    <types:processor-declaration>
+      <types:output-event>
+        <types:message>
+          <types:payload type="json-job-type"/>
+        </types:message>
+      </types:output-event>
+    </types:processor-declaration>
+  </types:enrichment>
+  <types:enrichment select="#81815fdf-2f64-4015-85ca-422b86309eda">
+    <types:processor-declaration>
+      <types:input-event>
+        <types:message>
+          <types:payload type="json-job-type"/>
+        </types:message>
+      </types:input-event>
+    </types:processor-declaration>
+  </types:enrichment>
+</types:mule>

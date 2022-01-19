@@ -1,0 +1,18 @@
+{
+  "sampleData": {
+    "f669c27d-a214-4bbe-96c7-d9dfb32ca2dd": {
+      "payload": "sample_data/json.json"
+    },
+    "81815fdf-2f64-4015-85ca-422b86309eda": {},
+    "e271d4aa-4f8b-4ab1-a65a-0e07060c7892": {
+      "vars-flowName": "sample_data/java.dwl"
+    },
+    "613ddccf-f613-4c30-b6d1-97fc251e1983": {
+      "payload": "sample_data/java_1.dwl"
+    },
+    "8155c043-6988-48ae-bbd5-2b301caa2fb2": {
+      "payload": "sample_data/json_2.json",
+      "vars-mappingLookup": "sample_data/json_1.json"
+    }
+  }
+}

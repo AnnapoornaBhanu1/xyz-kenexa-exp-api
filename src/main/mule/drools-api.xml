@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:os="http://www.mulesoft.org/schema/mule/os" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+	<os:object-store name="Object_store" doc:name="Object store" doc:id="59d0a4a0-8c56-46fc-b449-4259f10ab75b" entryTtl="12" entryTtlUnit="HOURS" expirationIntervalUnit="HOURS" />
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="9c5aa82d-7b19-450f-8d47-3ba5ee0d2610" >
+		<http:listener-connection host="localhost" port="8081" />
+	</http:listener-config>
+	<flow name="drools-apiFlow" doc:id="9baa7a84-08d5-4820-9418-1dc0ca4566de" >
+		<http:listener doc:name="Listener" doc:id="4498f947-471d-4417-8230-84300e27fffa" config-ref="HTTP_Listener_config" path="/drools" allowedMethods="POST"/>
+		<set-variable value="#[payload.orgName]" doc:name="orgName Variable" doc:id="8947fac8-3a07-483a-8606-c0f821e4a251" variableName="orgName"/>
+		<os:contains doc:name="Contains key " doc:id="0545af25-728c-4be3-894d-7011481c75e1" key="#[vars.orgName]" objectStore="Object_store" target="objectStoreContainsKey"/>
+		<choice doc:name="Choice" doc:id="297546da-c40f-4d62-b3d8-3be19457d970" >
+			<when expression="#[vars.objectStoreContainsKey]">
+				<os:retrieve doc:id="3750890f-ff40-4a12-ba35-c8f160e96d39" objectStore="Object_store" key="#[vars.orgName]" target="mappingLookup">
+			<os:default-value><![CDATA[#[null]]]></os:default-value>
+		</os:retrieve>
+			</when>
+			<otherwise>
+				<flow-ref doc:name="storeMappinginObjectStore_subFlow" doc:id="7b849fe9-e2b6-497a-8d04-51d599456f42" name="storeMappinginObjectStore_subFlow" />
+			</otherwise>
+		</choice>
+		<flow-ref doc:name="Kenexa call" doc:id="b089c22c-7c0c-4099-ad16-82de3efb33de" name='#[vars.orgName ++ "-Kenexa-call"]' />
+		<ee:transform doc:name="Request to sample-dt decision table" doc:id="8155c043-6988-48ae-bbd5-2b301caa2fb2" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"commands" : [ 
+    {
+    "insert" : 
+      {
+          "out-identifier":"SymphonyTalentComplex_1.0.0-SNAPSHOT",
+          "return-object":"true",
+      "object" :{
+      	"complexLogicClass":
+          {
+    orgName: vars.orgName,
+	firstName: payload[vars.mappingLookup.firstName] ,
+	middleName: payload[vars.mappingLookup.middleName],
+	lastName: payload[vars.mappingLookup.lastName],
+	"salary": payload.salary,
+	"exchangeRate": payload.exchangeRate	
+	}
+	
+	}
+}
+
+},
+    {
+    "fire-all-rules" : {}
+    } 
+
+]
+
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<http:request method="POST" doc:name="Request to sample-dt lookup decision table" doc:id="b06adff8-43af-400d-972e-8b2c5c39c491" url="http://localhost:8180/kie-server/services/rest/server/containers/instances/SymphonyTalentComplex_1.0.0-SNAPSHOT" outputMimeType="application/json">
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "Basic a2llc2VydmVyOmtpZXNlcnZlcjEh",
+	"Content-Type": "application/json",
+"X-KIE-ContentType" : "JSON"
+}]]]></http:headers>
+		</http:request>
+		<ee:transform doc:name="Transform Message" doc:id="04205874-88d4-4da2-9d52-8b0d6f95acf9" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.result.'execution-results'.results map($.value.'com.symphony.symphonytalentcomplex.complexLogicClass')]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<sub-flow name="storeMappinginObjectStore_subFlow" doc:id="3caaafba-bfc9-4f20-afaa-15dd57ea2f64" >
+		<http:request method="POST" doc:name="Request to mapping lookup decision table" doc:id="f27b0cb0-bf9e-4b04-bf17-18ca13d50997" url="http://localhost:8180/kie-server/services/rest/server/containers/instances/SymphonyTalent_1.0.0-SNAPSHOT" outputMimeType="application/json">
+			<http:body><![CDATA[#[{
+  "lookup" : null,
+  "commands" : [ 
+    {
+    "insert" : 
+      {
+          "out-identifier":"SymphonyTalent_1.0.0-SNAPSHOT",
+          "return-object":"true",
+      "object" :{
+
+          "mappingLookupClass":
+          {
+              "orgName": vars.orgName
+          }
+      }
+      }
+    },
+    {
+    "fire-all-rules" : {}
+    } ]
+}]]]></http:body>
+			<http:headers><![CDATA[#[output application/java
+---
+{
+	"Authorization" : "Basic a2llc2VydmVyOmtpZXNlcnZlcjEh",
+	"Content-Type": "application/json",
+"X-KIE-ContentType" : "JSON"
+}]]]></http:headers>
+		</http:request>
+		<ee:transform doc:name="variable mappingLookup" doc:id="613ddccf-f613-4c30-b6d1-97fc251e1983">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="mappingLookup"><![CDATA[%dw 2.0
+output application/json
+---
+payload.result.'execution-results'.results map($.value.'com.symphony.symphonytalent.mappingLookupClass') reduce $]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<os:store doc:name="Store" doc:id="62a98177-77e8-4a9f-accb-179171a13bbb" key="#[vars.orgName]" objectStore="Object_store">
+			<os:value ><![CDATA[#[vars.mappingLookup]]]></os:value>
+		</os:store>
+	</sub-flow>
+	<sub-flow name="ibm-Kenexa-call" doc:id="1b4353f3-463d-49f9-b5f4-d91b9b1c6dab" >
+		<set-payload value='#[output application/json&#10;---&#10;{&#10;	"fname": "James",&#10;	"mname": "Randy",&#10;	"lname": "Smith",&#10;	"salary": 16000,&#10;	"exchangeRate": 0.8&#10;}]' doc:name="Apisero Kenexa Response" doc:id="bbdcabd7-eafa-4de5-aae6-143239de4017" />
+	</sub-flow>
+	
+	<sub-flow name="xyz-Kenexa-call" doc:id="3adf518c-7186-41fd-8e22-d5642ba9998b" >
+		<set-payload value='#[output application/json
+&#10;---
+&#10;{
+&#10;	"first_name": "John",
+&#10;	"middle_name": "Chris",
+&#10;	"last_name": "Cena",
+&#10;	"salary": 100000,
+&#10;	"exchangeRate": 0.8
+&#10;}]' doc:name="Wipro Kenexa Response" doc:id="07bf422c-cd6c-4d13-9f4d-a88fc6a0b71d" />
+	</sub-flow>
+	<flow name="drools-apiFlow1" doc:id="7f094703-958b-4a65-a867-c453d0c50dfe" >
+		<http:listener doc:name="Listener" doc:id="189d4699-02bc-41b7-bfdd-a69c4e258992" config-ref="HTTP_Listener_config" path="/clear"/>
+		<os:clear doc:name="Clear" doc:id="8c714da8-d91e-4b14-8c53-be7dc6915c55" objectStore="Object_store"/>
+	</flow>
+</mule>

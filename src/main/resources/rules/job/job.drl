@@ -1,0 +1,25 @@
+package rules.name
+
+import com.drools.example.Name;
+
+dialect "mvel"
+
+
+rule "Organization1"
+    when
+        n:Name(orgName=="Apisero")
+    then
+        n.setfirstName(n.getfirstName() + " " + n.getmiddleName());
+        n.setmiddleName(n.getmiddleName());
+        n.setlastName(n.getmiddleName());
+end
+
+rule "Organization2"
+    when
+        n:Name(orgName=="Infosys")
+    then
+        n.setfirstName("infyfirst");
+        n.setmiddleName("infymiddle");
+        n.setlastName("infylast");
+end
+
